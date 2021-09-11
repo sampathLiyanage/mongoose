@@ -1,7 +1,13 @@
 // Copyright (c) 2020 Cesanta Software Limited
 // All rights reserved
 
+//Run following command from this directory to compile  
+//cc ../../mongoose.c main.c -I../.. -I../.. -W -Wall -DMG_ENABLE_IPV6=1 -DMG_ENABLE_LINES=1  -o http_server -lws2_32 -mwindows
+
 #include <signal.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <shellapi.h>
 #include "mongoose.h"
 
 static const char *s_debug_level = "2";
@@ -69,16 +75,13 @@ int main(int argc, char *argv[]) {
   mg_log_set(s_debug_level);
   mg_mgr_init(&mgr);
   if ((c = mg_http_listen(&mgr, s_listening_address, cb, &mgr)) == NULL) {
-    LOG(LL_ERROR, ("Cannot listen on %s. Use http://ADDR:PORT or :PORT",
-                   s_listening_address));
-    exit(EXIT_FAILURE);
+      ShellExecute(0, 0, s_listening_address, 0, 0 , SW_SHOW );
+  } else {
+      if (mg_casecmp(s_enable_hexdump, "yes") == 0) c->is_hexdumping = 1;
+      // Start infinite event loop
+      ShellExecute(0, 0, s_listening_address, 0, 0 , SW_SHOW );
+      while (s_signo == 0) mg_mgr_poll(&mgr, 1000);
+      mg_mgr_free(&mgr);
   }
-  if (mg_casecmp(s_enable_hexdump, "yes") == 0) c->is_hexdumping = 1;
-
-  // Start infinite event loop
-  LOG(LL_INFO, ("Starting Mongoose v%s, serving [%s]", MG_VERSION, s_root_dir));
-  while (s_signo == 0) mg_mgr_poll(&mgr, 1000);
-  mg_mgr_free(&mgr);
-  LOG(LL_INFO, ("Exiting on signal %d", s_signo));
   return 0;
 }
